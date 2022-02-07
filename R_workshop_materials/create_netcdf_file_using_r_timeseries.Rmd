@@ -1,0 +1,176 @@
+## Load libraries
+
+Firstly, let's load the libraries that we will use.
+
+They will need to be installed first if you don't already have them.
+
+```{r}
+#install.packages("readxl")
+library(readxl)
+#install.packages("RNetCDF")
+library(RNetCDF)
+```
+
+## Loading and checking the data
+
+Let's look at the data we are working with first:
+
+```{r}
+data <- read_excel("meteorological_measurements_time_series_variables.xlsx")
+print(data, n=Inf)
+```
+
+We have a time series of meteorlogical data; air_temperature, wind_speed and relative_humidity, each recorded at 1 hour intervals. We can ignore that an incorrect date has been added by default. We will see later that we only need the time anyway. 
+Most columns headers are taken from the CF standard names. This is a common vocabulary, where parameter names can be searched for online, with descriptions, so that everyone is clear what the data represent.
+
+http://cfconventions.org/standard-names.html
+
+Let's plot the data.
+
+```{r}
+plot(data$Time, data$`air_temperature (degC)`, type ="l")
+plot(data$Time, data$`wind_speed (m s-1)`, type ="l")
+plot(data$Time, data$`relative_humidity (%)`, type ="l")
+```
+
+##  Creating NetCDF file
+
+First let's initialise the dataset
+
+```{r}
+nc <- create.nc("meteorological_data_time_series.nc")
+```
+### Defining dimensions
+
+A NetCDF file has dimensions that define the shape of the data. In this case, our only dimension is time. 'time' is a commonly defined dimension name, so to be CF-compliant, we should use that.
+
+```{r}
+dim.def.nc(nc, "time", nrow(data))
+```
+
+### About time
+
+There are specific recommendations on how time should be stored in netCDF files. I will try to explain briefly here, and there is a nice explanation here too: https://www.unidata.ucar.edu/software/netcdf/time/recs.html
+
+It is most common to have a dimension named "time" as well as a coordinate variable with the same name. Let's discuss the variable first.
+
+The "time" variable has units that count from a user defined origin, for example "hours since 2020-01-01 00:00 UTC" or "days since 2014-01-01". The units may be in years, days, seconds, nanoseconds, etc. Whilst this approach may seem strange at a glance, it allows the times to be stored in conventional numerical formats such as integers, and to our desired precision. This is much more efficient than using a long timestamp string for each coordinate.
+
+And what about the time dimension? Well this defines the shape or grid of the data. In this dataset, we will have 4 variables (time, air_temperature, relative_humidity, wind_speed), and they will all have the same dimension "time". Therefore, the dimension helps the data user to link each of the variables together.
+
+### Defining Variables
+
+A NetCDF has both coordinate variables and data variables. Dimensions define how many grid points there are, coordinate variables define what the actual values are. 
+
+Let's now initialise our variables. We will assign our values later.
+
+```{r}
+var.def.nc(nc, "time", "NC_INT", "time")
+var.def.nc(nc, "air_temperature", "NC_DOUBLE", "time")
+var.def.nc(nc, "wind_speed", "NC_DOUBLE", "time")
+var.def.nc(nc, "relative_humidity", "NC_DOUBLE", "time")
+```
+
+Now we need a variable attributes for our variables, so that our dataset is compliant with the CF conventions. 
+
+The standard_name should be selected from here: http://cfconventions.org/standard-names.html. Standard names are commonly accepted parameter names with descriptions. By selecting appropriate standard names for your variable, the data user will be clear exactly what the data represent.
+
+The units should match what is provided for the standard name as listed above. You may need to convert your data.
+
+The long_name is more descriptive and can be in your own words.
+
+The coverage_content_type describes what type of data the variable contains
+
+Some help on these variable attributes can be found here: https://commons.esipfed.org/acdd_1-3_references
+
+The data variables should be assigned a fill value. This is a value that is used at grid points where no data exists. We usually choose an unrealistically large value that will obviously appear as a spike to the data user. The fill value is later specified as a variable attribute. Note that coordinate variables should not have fill values as they should not have missing values.
+
+```{r}
+att.put.nc(nc, "time", "units", "NC_CHAR", "hours since 2021-02-21T10:00:00Z") # Units for time must be in this format.
+att.put.nc(nc, "time", "long_name", "NC_CHAR", "time in hours since 2021-02-21T10:00:00Z")
+
+# It is just coincidence that I have used the same variable name (2nd argument) as the standard name (last argument) here.
+att.put.nc(nc, "wind_speed", "standard_name", "NC_CHAR", "wind_speed")
+att.put.nc(nc, "wind_speed", "long_name", "NC_CHAR", "Wind speed, magnitude of the 2 horizontal components of velocity, measured at an elevation of 2 meters")
+att.put.nc(nc, "wind_speed", "coverage_content_type", "NC_CHAR", "physicalMeasurement")
+att.put.nc(nc, "wind_speed", "units", "NC_CHAR", "m s-1")
+att.put.nc(nc, "wind_speed", "_FillValue", "NC_DOUBLE", 1e32)
+
+att.put.nc(nc, "air_temperature", "standard_name", "NC_CHAR", "air_temperature")
+att.put.nc(nc, "air_temperature", "long_name", "NC_CHAR", "Air temperature in degrees kelvin, measured at an elevation of 2 meters")
+att.put.nc(nc, "air_temperature", "coverage_content_type", "NC_CHAR", "physicalMeasurement")
+att.put.nc(nc, "air_temperature", "units", "NC_CHAR", "K")
+att.put.nc(nc, "air_temperature", "_FillValue", "NC_DOUBLE", 1e32)
+
+att.put.nc(nc, "relative_humidity", "standard_name", "NC_CHAR", "relative_humidity")
+att.put.nc(nc, "relative_humidity", "long_name", "NC_CHAR", "Relative humidity of air, the amount of moisture in the air at a certain temperature compared to what the air can hold at that temperature")
+att.put.nc(nc, "relative_humidity", "coverage_content_type", "NC_CHAR", "physicalMeasurement")
+att.put.nc(nc, "relative_humidity", "units", "NC_CHAR", "1")
+att.put.nc(nc, "relative_humidity", "_FillValue", "NC_DOUBLE", 1e32)
+```
+
+### Putting variables
+
+Now we need to put the values into that variable
+
+```{r}
+var.put.nc(nc, "time", data$Hour)
+var.put.nc(nc, "wind_speed", data$`air_temperature (degC)`+ 273.15) # Converting to preferred units defined by the standard_name
+var.put.nc(nc, "wind_speed", data$`wind_speed (m s-1)`)
+var.put.nc(nc, "wind_speed", data$`relative_humidity (%)`)
+```
+
+### Gloabl attributes
+
+Global attributes describe the dataset as a whole. A list of what global attributes must be included can be found here:
+
+https://adc.met.no/node/4
+
+These are based on the ACDD conventions, that you can find here:
+
+https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
+
+We refer to which conventions the file adheres to (including version) in the 'conventions' global attribute.
+
+Additional global attributes can also be included, defined by the user. Make sure that the attribute names you select are understandable. 
+
+To save you from having to write them all out, I have written them in a separate file that you can load in as below.
+
+```{r}
+global_attributes <- read_excel("meteorological_measurements_time_series_global_attributes.xlsx")
+```
+
+Now we can iterate over each row and write each attribute in turn. We do this by using a special attribute name, NC_GLOBAL. 
+
+```{r}
+for (i in 1:nrow(global_attributes)) {
+    row <- global_attributes[i,]
+    if (row$Format == "NC_DOUBLE") {
+      att.put.nc(nc, "NC_GLOBAL", row$AttributeName, "NC_DOUBLE", as.double(row$Content))  
+    }
+    else {
+      att.put.nc(nc, "NC_GLOBAL", row$AttributeName, "NC_CHAR", row$Content)
+    }
+}
+```
+
+We should update some of the attributes to include the current timestamp.
+
+```{r}
+dtnow <- format(Sys.time(), tz = "UTC", "%FT%R:%SZ")
+att.put.nc(nc, "NC_GLOBAL", "date_created", "NC_CHAR", dtnow)
+att.put.nc(nc, "NC_GLOBAL", "history", "NC_CHAR", paste("File created using RNetCDF in R at",dtnow))
+```
+
+Finally, we close the file to ensure that it is written and that everything is complete.
+
+```{r}
+close.nc(nc)
+```
+
+We can then open it up and print it to check if everything looks okay!
+
+```{r}
+nc <- open.nc("meteorological_data_time_series.nc")
+print.nc(nc)
+```

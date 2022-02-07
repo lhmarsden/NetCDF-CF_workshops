@@ -1,0 +1,80 @@
+## Load libraries
+
+Firstly, let's load the libraries that we will use.
+
+They will need to be installed first if you don't already have them.
+
+```{r}
+#install.packages('writexl')
+library(writexl)
+#install.packages("RNetCDF")
+library(RNetCDF)
+```
+
+## Introducing the data
+
+In this example, we will be loading a depth profile of some Chlorophyll A data. However, this example should be relevant for depth profiles of any data.
+
+Nansen Legacy data can be found via the SIOS data access portal. All Nansen Legacy datasets should be returned when filtering using the 'AeN' collection. Please contact data.nleg@unis.no if you have any problems finding or accessing data.
+
+I have downloaded the following dataset into my directory.
+
+## Loading the data
+
+```{r}
+nc <- open.nc("AeN_SeaWaterChlorophyllA_20191210_P2.nc")
+print.nc(nc)
+```
+
+At a glance, we can see it has 2 dimensions; they denote that there are 168 depth points and 36 characters (NCHAR).
+
+There are 2 coordinate variables, with the same name as the dimensions. 
+
+There are 4 data variables. The CHLOROPHYLL_A, FILTERED_VOLUME and PHAEOPIGMENT variables all have depth as their dimension. This means that the first chlorophyll a value corresponds to the first depth value.
+
+The EVENT_ID has two dimensions, DEPTH and NCHAR. This is therefore a 2 dimensional array. This tells us that there is a maximum of one EVENT_ID for each of the 168 depths, and it has 36 characters - though variables can have missing values, denoted using a fill value. More on this later.
+
+Finally, we have a long list of global attributes.
+
+## A closer look
+
+HOW CAN I
+1. Look at all attributes from 1 variable
+2. Look at all global attributes
+
+We can access a variable attribute like this:
+
+```{r}
+att.get.nc(nc, "CHLOROPHYLL_A", "units")
+```
+
+Or we can use the special "NC_GLOBAL" variable name to access a global attribute, like this:
+
+```{r}
+att.get.nc(nc, "NC_GLOBAL", "creator_name")
+```
+
+Let's write our Chlorophyll A data out as a variable we can easily use later:
+
+```{r}
+chla <- var.get.nc(nc, "CHLOROPHYLL_A")
+depth <- var.get.nc(nc, "DEPTH")
+phaeopigment <- var.get.nc(nc, "PHAEOPIGMENT")
+filteredvol <- var.get.nc(nc, "FILTERED_VOLUME")
+plot(chla, -depth)
+```
+
+## Outputting to Excel
+
+To output the data to Excel, we can first create a dataframe. 
+
+```{r}
+df <- data.frame(Depth = depth, ChlorophyllA = chla, Phaeopigment = phaeopigment, FilteredVolume = filteredvol)
+df
+```
+
+And then to output
+
+```{r}
+write_xlsx(df, '/home/lukem/chlorophyll_a_data_20191210_P2.xlsx')
+```

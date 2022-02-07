@@ -1,0 +1,180 @@
+## Load libraries
+
+Firstly, let's load the libraries that we will use.
+
+They will need to be installed first if you don't already have them.
+
+```{r}
+#install.packages("readxl")
+library(readxl)
+#install.packages("RNetCDF")
+library(RNetCDF)
+```
+
+## Loading and checking the data
+
+Let's look at the data we are working with first:
+
+```{r}
+data <- read_excel("multidimensional_sea_water_temperature_variables.xlsx")
+print(data, n=Inf)
+```
+
+Here, we are working with a multidimensional dataset, a grid sea water surface temperatures at different longitudes and latitudes, with measurements repeated every 3 days. This is not real data, but values I made up based on a random number generator. I have no idea if they are realistic, but you should get the idea!
+
+##  Creating NetCDF file
+
+First let's initialise the dataset
+
+```{r}
+nc <- create.nc("multidimensional_sea_water_temperature.nc")
+```
+### Defining dimensions
+
+A NetCDF file has dimensions that define the shape of the data. In this case, we have three dimensions; latitude, longitude and time. We have 2 points of latitude, 3 points of longitude, and data from 5 distinct times.
+
+```{r}
+dim.def.nc(nc, "latitude", 2)
+dim.def.nc(nc, "longitude", 3)
+dim.def.nc(nc, "time", 5)
+```
+
+### About time
+
+There are specific recommendations on how time should be stored in netCDF files. I will try to explain briefly here, and there is a nice explanation here too: https://www.unidata.ucar.edu/software/netcdf/time/recs.html
+
+It is most common to have a dimension named "time" as well as a coordinate variable with the same name. Let's discuss the variable first.
+
+The "time" variable has units that count from a user defined origin, for example "hours since 2020-01-01 00:00 UTC" or "days since 2014-01-01". The units may be in years, days, seconds, nanoseconds, etc. Whilst this approach may seem strange at a glance, it allows the times to be stored in conventional numerical formats such as integers, and to our desired precision. This is much more efficient than using a long timestamp string for each coordinate.
+
+### Defining Variables
+
+A NetCDF has both coordinate variables and data variables. Dimensions define how many grid points there are, coordinate variables define what the actual values are. 
+
+Let's now initialise our coordinate variables. We will come back to our data variable later.
+
+```{r}
+var.def.nc(nc, "time", "NC_INT", "time")
+var.def.nc(nc, "latitude", "NC_INT", "latitude")
+var.def.nc(nc, "longitude", "NC_INT", "longitude")
+```
+
+Now we need a variable attributes for our variables, so that our dataset is compliant with the CF conventions. 
+
+The standard_name should be selected from here: http://cfconventions.org/standard-names.html. Standard names are commonly accepted parameter names with descriptions. By selecting appropriate standard names for your variable, the data user will be clear exactly what the data represent.
+
+The units should match what is provided for the standard name as listed above. You may need to convert your data.
+
+The long_name is more descriptive and can be in your own words.
+
+The coverage_content_type describes what type of data the variable contains
+
+Some help on these variable attributes can be found here: https://commons.esipfed.org/acdd_1-3_references
+
+The data variables should be assigned a fill value. This is a value that is used at grid points where no data exists. We usually choose an unrealistically large value that will obviously appear as a spike to the data user. The fill value is later specified as a variable attribute. Note that coordinate variables should not have fill values as they should not have missing values.
+
+```{r}
+att.put.nc(nc, "time", "standard_name", "NC_CHAR", "time")
+att.put.nc(nc, "time", "units", "NC_CHAR", "days since 2022-07-02T00:00:00Z") # Units for time must be in this format.
+att.put.nc(nc, "time", "long_name", "NC_CHAR", "time in days since 2021-07-05")
+
+att.put.nc(nc, "latitude", "standard_name", "NC_CHAR", "latitude")
+att.put.nc(nc, "latitude", "units", "NC_CHAR", "degrees_north") 
+att.put.nc(nc, "latitude", "long_name", "NC_CHAR", "latitude in decimal degrees north")
+
+att.put.nc(nc, "longitude", "standard_name", "NC_CHAR", "longitude")
+att.put.nc(nc, "longitude", "units", "NC_CHAR", "degrees_east") 
+att.put.nc(nc, "longitude", "long_name", "NC_CHAR", "longitude in decimal degrees east")
+```
+
+### Restructuring multidimensional variable
+
+Sea water temperature has 3 dimensions. We therefore need to convert the data to a 3d array.
+
+The order you list the dimensions is important. The values in the array will be placed sequentially into the array. In our dataframe, the first 3 points are from 3 different points of longitude. Therefore, we list 3 first. Then, we go to the next point of latitude. There are 2 points of latitude, so we list 2 next. Finally, there are 5 points of time. 
+
+```{r}
+sea_water_temp_array = data$`Sea water temperature (degC)`
+dim(sea_water_temp_array) <- c(3,2,5)
+sea_water_temp_array
+```
+
+Have a close look at the array to see if we have got the dimensions the right way round. We have 5 'blocks' of 3x2 grids, corresponding to 5 times, 3 longitudes and 2 latitudes. Do the values match up to our dataframe above? Look's okay to me! 
+
+The order we have specified our dimensions when using the 'dim' function should be the same order we list our dimensions when we initialise the variable. It will fail when you try to put the array into the file if the array is not the correct shape, i.e. if you have defined the dimensions in the wrong order.
+
+```{r}
+var.def.nc(nc, "sea_water_temperature", "NC_DOUBLE", c("longitude", "latitude", "time"))
+
+att.put.nc(nc, "sea_water_temperature", "standard_name", "NC_CHAR", "sea_surface_skin_temperature")
+att.put.nc(nc, "sea_water_temperature", "long_name", "NC_CHAR", "Temperature of sea water directly below the surface")
+att.put.nc(nc, "sea_water_temperature", "coverage_content_type", "NC_CHAR", "physicalMeasurement")
+att.put.nc(nc, "sea_water_temperature", "units", "NC_CHAR", "K")
+att.put.nc(nc, "sea_water_temperature", "_FillValue", "NC_DOUBLE", 1e32)
+```
+
+### Putting variables
+
+Now we need to put the values into the variables.
+
+```{r}
+var.put.nc(nc, "time", unique(data$Day))
+var.put.nc(nc, "latitude", unique(data$Latitude))
+var.put.nc(nc, "longitude", unique(data$Longitude))
+var.put.nc(nc, "sea_water_temperature", sea_water_temp_array+ 273.15) # Converting to preferred units defined by the standard_name
+```
+
+### Gloabl attributes
+
+Global attributes describe the dataset as a whole. A list of what global attributes must be included can be found here:
+
+https://adc.met.no/node/4
+
+These are based on the ACDD conventions, that you can find here:
+
+https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
+
+We refer to which conventions the file adheres to (including version) in the 'conventions' global attribute.
+
+Additional global attributes can also be included, defined by the user. Make sure that the attribute names you select are understandable. 
+
+To save you from having to write them all out, I have written them in a separate file that you can load in as below.
+
+```{r}
+global_attributes <- read_excel("multidimensional_sea_water_temperature_global_attributes.xlsx")
+```
+
+Now we can iterate over each row and write each attribute in turn. We do this by using a special attribute name, NC_GLOBAL. 
+
+```{r}
+for (i in 1:nrow(global_attributes)) {
+    row <- global_attributes[i,]
+    if (row$Format == "NC_DOUBLE") {
+      att.put.nc(nc, "NC_GLOBAL", row$AttributeName, "NC_DOUBLE", as.double(row$Content))  
+    }
+    else {
+      att.put.nc(nc, "NC_GLOBAL", row$AttributeName, "NC_CHAR", row$Content)
+    }
+}
+```
+
+We should update some of the attributes to include the current timestamp.
+
+```{r}
+dtnow <- format(Sys.time(), tz = "UTC", "%FT%R:%SZ")
+att.put.nc(nc, "NC_GLOBAL", "date_created", "NC_CHAR", dtnow)
+att.put.nc(nc, "NC_GLOBAL", "history", "NC_CHAR", paste("File created using RNetCDF in R at",dtnow))
+```
+
+Finally, we close the file to ensure that it is written and that everything is complete.
+
+```{r}
+close.nc(nc)
+```
+
+We can then open it up and print it to check if everything looks okay!
+
+```{r}
+nc <- open.nc("meteorological_data_time_series.nc")
+print.nc(nc)
+```

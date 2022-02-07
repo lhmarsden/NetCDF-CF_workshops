@@ -1,0 +1,149 @@
+## Load libraries
+
+Firstly, let's load the libraries that we will use.
+
+They will need to be installed first if you don't already have them.
+
+
+```{r}
+#install.packages("readxl")
+library(readxl)
+#install.packages("RNetCDF")
+library(RNetCDF)
+```
+
+## Loading and checking the data
+
+Let's look at the data we are working with first:
+
+```{r}
+data <- read_excel("chlorophyll_a_depth_profile_variables.xlsx")
+print(data, n=Inf)
+```
+
+We have a depth profile of Chlorophyll A data. Most of the column headers are taken from the spreadsheet templates generators that were used to log the metadata.
+
+https://www.sios-svalbard.org/cgi-bin/darwinsheet/?setup=aen
+
+Other columns headers, for the data, are taken from the CF standard names. This is a common vocabulary, where parameter names can be searched for online, with descriptions, so that everyone is clear what the data represent.
+
+http://cfconventions.org/standard-names.html
+
+```{r}
+plot(data$sampleDepthInMeters, data$mass_concentration_of_chlorophyll_a_in_sea_water, type ="l")
+```
+
+##  Creating NetCDF file
+
+First let's initialise the dataset
+
+```{r}
+nc <- create.nc("chlorophyll_a_depth_profile.nc")
+```
+
+### Defining dimensions
+
+A NetCDF file has dimensions that define the shape of the data. In this case, our only dimension is the sample depth, and we have 10 depths. 'depth' is a commonly defined dimension name, so to be CF-compliant, we should use that.
+
+```{r}
+dim.def.nc(nc, "depth", nrow(data))
+```
+
+### Defining variables
+
+A NetCDF has both coordinate variables and data variables. Dimensions define how many grid points there are, coordinate variables define what the actual values are. 
+
+Let's now initialise our variables. We will assign our values later.
+
+```{r}
+var.def.nc(nc, "depth", "NC_INT", "depth")
+var.def.nc(nc, "chlorophyll_a", "NC_DOUBLE", "depth")
+```
+
+Now we need a variable attributes for our variables, so that our dataset is compliant with the CF conventions. 
+
+The standard_name should be selected from here: http://cfconventions.org/standard-names.html. Standard names are commonly accepted parameter names with descriptions. By selecting appropriate standard names for your variable, the data user will be clear exactly what the data represent.
+
+The units should match what is provided for the standard name as listed above. You may need to convert your data.
+
+The long_name is more descriptive and can be in your own words.
+
+The coverage_content_type describes what type of data the variable contains
+
+Some help on these variable attributes can be found here: https://commons.esipfed.org/acdd_1-3_references
+
+The data variable should be assigned a fill value. This is a value that is used at grid points where no data exists. We usually choose an unrealistically large value that will obviously appear as a spike to the data user. The fill value is later specified as a variable attribute. Note that coordinate variables should not have fill values as they should not have missing values.
+
+```{r}
+att.put.nc(nc, "depth", "units", "NC_CHAR", "m")
+att.put.nc(nc, "depth", "long_name", "NC_CHAR", "sample depth in meters")
+
+att.put.nc(nc, "chlorophyll_a", "standard_name", "NC_CHAR", "mass_concentration_of_chlorophyll_a_in_sea_water")
+att.put.nc(nc, "chlorophyll_a", "long_name", "NC_CHAR", "Mass concentration of Chlorophyll A in sea water, after acid correction")
+att.put.nc(nc, "chlorophyll_a", "coverage_content_type", "NC_CHAR", "physicalMeasurement")
+att.put.nc(nc, "chlorophyll_a", "units", "NC_CHAR", "kg m-3")
+att.put.nc(nc, "chlorophyll_a", "_FillValue", "NC_DOUBLE", -99999.9)
+```
+
+Now it's time to populate the variables with our data
+
+```{r}
+var.put.nc(nc, "depth", data$sampleDepthInMeters)
+var.put.nc(nc, "chlorophyll_a", data$mass_concentration_of_chlorophyll_a_in_sea_water)
+```
+
+### Gloabl attributes
+
+Global attributes describe the dataset as a whole. A list of what global attributes must be included can be found here:
+
+https://adc.met.no/node/4
+
+These are based on the ACDD conventions, that you can find here:
+
+https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
+
+We refer to which conventions the file adheres to (including version) in the 'conventions' global attribute.
+
+Additional global attributes can also be included, defined by the user. Make sure that the attribute names you select are understandable. 
+
+To save you from having to write them all out, I have written them in a separate file that you can load in as below.
+
+```{r}
+global_attributes <- read_excel("chlorophyll_a_depth_profile_global_attributes.xlsx")
+```
+
+Now we can iterate over each row and write each attribute in turn. We do this by using a special attribute name, NC_GLOBAL. 
+
+```{r}
+for(i in 1:nrow(global_attributes)) {
+    row <- global_attributes[i,]
+    if (row$Format == "NC_DOUBLE") {
+      att.put.nc(nc, "NC_GLOBAL", row$AttributeName, "NC_DOUBLE", as.double(row$Content))  
+    }
+    else {
+      att.put.nc(nc, "NC_GLOBAL", row$AttributeName, "NC_CHAR", row$Content)
+    }
+}
+```
+
+We should update some of the attributes to include the current timestamp.
+
+```{r}
+dtnow <- format(Sys.time(), tz = "UTC", "%FT%R:%SZ")
+att.put.nc(nc, "NC_GLOBAL", "date_created", "NC_CHAR", dtnow)
+att.put.nc(nc, "NC_GLOBAL", "history", "NC_CHAR", paste("File created using RNetCDF in R at",dtnow))
+```
+
+Finally, we close the file to ensure that it is written and that everything is complete.
+
+```{r}
+close.nc(nc)
+```
+
+We can then open it up and print it to check if everything looks okay!
+
+```{r}
+nc <- open.nc("chlorophyll_a_depth_profile.nc")
+print.nc(nc)
+```
+
