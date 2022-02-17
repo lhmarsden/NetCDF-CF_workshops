@@ -22,13 +22,15 @@ I have downloaded the following dataset into my directory.
 ## Loading the data
 
 ```{r}
-nc <- open.nc("AR_PR_CT_58US_2021710.nc")
-print.nc(nc)
+data <- open.nc("AR_PR_CT_58US_2021710.nc")
+print.nc(data)
 ```
 
-At a glance, we can see it has 5 dimensions; they they show that there are data from 44 different locations. There are 4363 points of depth. This doesn't mean that there are 4363 samples for every station; more likely there is a lot of 'empty' space in this file where a measurement was not taken at a certain depth. This is neccessary for us to use a single depth dimension for a range of different depth profiles, which each sample different depths.
+At a glance, we can see it has 5 dimensions; they they show that there are data from 44 different locations. There are 4363 points of depth. This doesn't mean that there are 4363 samples for every station; more likely there is a lot of 'empty' space in this file where a measurement was not taken at a certain depth. This is necessary for us to use a single depth dimension for a range of different depth profiles, which each sample different depths.
 
 There is then a whole host of variables and attributes which correspond. The coordinate variables are first, with the same name as their respective dimension. For example TIME(TIME) is the VARIABLE(DIMENSION). The dimension states how many times have been sampled, the variable states what these times are.
+
+There is no coordinate variable for depth. Therefore, we can't be certain what depths have been sampled. However, we can see from the 'geospatial_vertical_min' global attribute that the minimum depth sampled was 5 m, and from 'geospatial_vertical_max' that the maximum depth sampled was 4367 m. Since there are 4636 depth points, we can assume that there is a 1 m sampling increment between these depths. The pressure variable might also be able to help us if we are uncertain.
 
 Most of the variables have two dimensions; depth and time. Latitude and longitude are only used in coordinate variables, but we can assume here that each coordinate corresponds to a single time. There are other ways to create a netcdf file to more explicitly state this, by having longitude and latitude variables that each have the dimension of time, thus linking them together. An important point to take away is that different people have different ways of doing things, but we should be able to easily understand what has been done and adapt our code accordingly. 
 
@@ -37,40 +39,46 @@ Most of the variables have two dimensions; depth and time. Latitude and longitud
 We can access a variable attribute like this:
 
 ```{r}
-att.get.nc(nc, "PSAL", "units")
+att.get.nc(data, "PSAL", "units")
 ```
 
 Or we can use the special "NC_GLOBAL" variable name to access a global attribute, like this:
 
 ```{r}
-att.get.nc(nc, "NC_GLOBAL", "creator_name")
+att.get.nc(data, "NC_GLOBAL", "creator_name")
 ```
 
 ## Writing data to variables
 
-Let's write the data that we are interested in to variables we can easily use later. There is a lot of data here so I am not going to print them!:
+Let's write the data that we are interested in to variables we can easily use later. Some of the variables have a variable attribute 'scale_factor'. This means that the values have been scaled by this factor before storing the values. This is done to save space. For example, let's look at the temperature variable. 
 
 ```{r}
-time <- var.get.nc(nc, "TIME")
-print(dim(time))
-latitude <- var.get.nc(nc, "LATITUDE")
-print(dim(latitude))
-longitude <- var.get.nc(nc, "LONGITUDE")
-print(dim(longitude))
-pressure <- var.get.nc(nc, "PRES")
-print(dim(pressure))
-psal <- var.get.nc(nc, "PSAL")
-print(dim(psal))
-temp <- var.get.nc(nc, "TEMP")
-print(dim(temp))
-var.get.nc(nc, "TIME")
+var.get.nc(data, "TEMP")[1:50] # Just the first 50 values
+att.get.nc(data, "TEMP", "scale_factor")
 ```
 
-
-Our time variable is currently in 'days since 1950-01-01T00:00:00Z' Let's convert these values to something more useful to us.
+These values are far too high. They have been divided by 0.001 before they have been stored. So we need to multiply by 0.001 to correct for this. Some softwares will do this for us automatically (e.g. xarray in Python) but RNetCDF does not.
 
 ```{r}
-att.get.nc(nc, "TIME", "units")
+time <- var.get.nc(data, "TIME")
+print(dim(time))
+latitude <- var.get.nc(data, "LATITUDE")
+print(dim(latitude))
+longitude <- var.get.nc(data, "LONGITUDE")
+print(dim(longitude))
+pressure <- var.get.nc(data, "PRES")
+print(dim(pressure))
+psal <- var.get.nc(data, "PSAL") * att.get.nc(data, "TEMP", "scale_factor")
+print(dim(psal))
+temp <- var.get.nc(data, "TEMP") * att.get.nc(data, "TEMP", "scale_factor")
+print(dim(temp))
+var.get.nc(data, "TIME")
+```
+
+Our time variable is currently in 'days since 1950-01-01T00:00:00Z' Let's convert these values to timestamps that are more useful to us. Again, some other softwares will do this for us.
+
+```{r}
+att.get.nc(data, "TIME", "units")
 date0 <- strptime("01/01/1950 00:00:00", "%m/%d/%Y %H:%M:%S", tz="UTC")
 timestamps <- date0 + (3600 * 24 * time)
 timestamps
@@ -81,8 +89,6 @@ timestamps
 The file doesn't explicitly tell us, but we will assume that each of our 44 coordinates relates to a single one of our 44 times. Before we output these data to Excel, we can first combine them into a dataframe (basically a table).
 
 There are a number of different ways to do this depending on how we want to structure our data. Here, we will create one file for each depth profile. Each file will have multiple columns; pressure, salinity and temperature. We also want to log our latitude, longitude and time information somewhere. In this case, I will dump all this to a separate file, along with a 'profile number' counter. I will use this 'profile number' in each file name for our data. 
-
-WHAT IS WRONG WITH MY TEMPERATURE VARIABLE?
 
 ```{r}
 for (profile in 1:length(time)) {
