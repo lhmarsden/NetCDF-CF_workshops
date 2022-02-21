@@ -22,8 +22,8 @@ I have downloaded the following dataset into my directory.
 ## Loading the data
 
 ```{r}
-nc <- open.nc("AeN_SeaWaterChlorophyllA_20191210_P2.nc")
-print.nc(nc)
+data <- open.nc("AeN_SeaWaterChlorophyllA_20191210_P2.nc")
+print.nc(data)
 ```
 
 At a glance, we can see it has 2 dimensions; they denote that there are 168 depth points and 36 characters (NCHAR).
@@ -38,29 +38,25 @@ Finally, we have a long list of global attributes.
 
 ## A closer look
 
-HOW CAN I
-1. Look at all attributes from 1 variable
-2. Look at all global attributes
-
 We can access a variable attribute like this:
 
 ```{r}
-att.get.nc(nc, "CHLOROPHYLL_A", "units")
+att.get.nc(data, "CHLOROPHYLL_A", "units")
 ```
 
 Or we can use the special "NC_GLOBAL" variable name to access a global attribute, like this:
 
 ```{r}
-att.get.nc(nc, "NC_GLOBAL", "creator_name")
+att.get.nc(data, "NC_GLOBAL", "creator_name")
 ```
 
 Let's write our Chlorophyll A data out as a variable we can easily use later:
 
 ```{r}
-chla <- var.get.nc(nc, "CHLOROPHYLL_A")
-depth <- var.get.nc(nc, "DEPTH")
-phaeopigment <- var.get.nc(nc, "PHAEOPIGMENT")
-filteredvol <- var.get.nc(nc, "FILTERED_VOLUME")
+chla <- var.get.nc(data, "CHLOROPHYLL_A")
+depth <- var.get.nc(data, "DEPTH")
+phaeopigment <- var.get.nc(data, "PHAEOPIGMENT")
+filteredvol <- var.get.nc(data, "FILTERED_VOLUME")
 plot(chla, -depth)
 ```
 
@@ -70,6 +66,13 @@ To output the data to Excel, we can first create a dataframe.
 
 ```{r}
 df <- data.frame(Depth = depth, ChlorophyllA = chla, Phaeopigment = phaeopigment, FilteredVolume = filteredvol)
+df
+```
+
+Let's remove the rows with NAs
+
+```{r}
+df <- na.omit(df)
 df
 ```
 
