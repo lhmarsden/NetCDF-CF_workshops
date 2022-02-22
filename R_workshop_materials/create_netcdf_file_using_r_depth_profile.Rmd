@@ -35,7 +35,7 @@ plot(data$sampleDepthInMeters, data$mass_concentration_of_chlorophyll_a_in_sea_w
 
 ##  Creating NetCDF file
 
-First let's initialise the dataset
+First let's initialise the dataset.
 
 ```{r}
 nc <- create.nc("chlorophyll_a_depth_profile.nc")
@@ -43,7 +43,7 @@ nc <- create.nc("chlorophyll_a_depth_profile.nc")
 
 ### Defining dimensions
 
-A NetCDF file has dimensions that define the shape of the data. In this case, our only dimension is the sample depth, and we have 10 depths. 'depth' is a commonly defined dimension name, so to be CF-compliant, we should use that.
+A NetCDF file has dimensions that define the shape of the data. In this case, our only dimension is the sample depth, and we have 10 depths. 'depth' is a commonly defined dimension name, so to be CF-compliant, we should use that. Note that at this point we are not assigning values for the depths.
 
 ```{r}
 dim.def.nc(nc, "depth", nrow(data))

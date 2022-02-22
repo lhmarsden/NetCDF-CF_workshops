@@ -198,7 +198,7 @@ print(data, n=Inf)</code></pre>
 ## 12 1899-12-31 21:00:00    11             -11.9              6.4               57
 ## 13 1899-12-31 22:00:00    12             -11.6              6.5               57
 ## 14 1899-12-31 23:00:00    13             -11.7              6.6               58</code></pre>
-<p>We have a time series of meteorlogical data; air_temperature, wind_speed and relative_humidity, each recorded at 1 hour intervals. We can ignore that an incorrect date has been added by default. We will see later that we only need the time anyway. Most columns headers are taken from the CF standard names. This is a common vocabulary, where parameter names can be searched for online, with descriptions, so that everyone is clear what the data represent.</p>
+<p>We have a time series of meteorological data; air_temperature, wind_speed and relative_humidity, each recorded at 1 hour intervals. We can ignore that an incorrect date has been added by default. We will see later that we only need the time anyway. Most columns headers are taken from the CF standard names. This is a common vocabulary, where parameter names can be searched for online, with descriptions, so that everyone is clear what the data represent.</p>
 <p><a href="http://cfconventions.org/standard-names.html" class="uri">http://cfconventions.org/standard-names.html</a></p>
 <p>Let’s plot the data.</p>
 <pre class="r"><code>plot(data$Time, data$`air_temperature (degC)`, type =&quot;l&quot;)</code></pre>
@@ -219,7 +219,7 @@ print(data, n=Inf)</code></pre>
 </div>
 <div id="about-time" class="section level3">
 <h3>About time</h3>
-<p>There are specific recommendations on how time should be stored in netCDF files. I will try to explain briefly here, and there is a nice explanation here too: <a href="https://www.unidata.ucar.edu/software/netcdf/time/recs.html" class="uri">https://www.unidata.ucar.edu/software/netcdf/time/recs.html</a></p>
+<p>There are specific recommendations on how time should be stored in NetCDF-CF files. I will try to explain briefly here, and there is a nice explanation here too: <a href="https://www.unidata.ucar.edu/software/netcdf/time/recs.html" class="uri">https://www.unidata.ucar.edu/software/netcdf/time/recs.html</a></p>
 <p>It is most common to have a dimension named “time” as well as a coordinate variable with the same name. Let’s discuss the variable first.</p>
 <p>The “time” variable has units that count from a user defined origin, for example “hours since 2020-01-01 00:00 UTC” or “days since 2014-01-01”. The units may be in years, days, seconds, nanoseconds, etc. Whilst this approach may seem strange at a glance, it allows the times to be stored in conventional numerical formats such as integers, and to our desired precision. This is much more efficient than using a long timestamp string for each coordinate.</p>
 <p>And what about the time dimension? Well this defines the shape or grid of the data. In this dataset, we will have 4 variables (time, air_temperature, relative_humidity, wind_speed), and they will all have the same dimension “time”. Therefore, the dimension helps the data user to link each of the variables together.</p>
@@ -338,9 +338,9 @@ print.nc(nc)</code></pre>
 ##      NC_CHAR :time_coverage_start = &quot;2021-02-21T10:00:00Z&quot; ;
 ##      NC_CHAR :time_coverage_end = &quot;2021-02-21T23:00:00Z&quot; ;
 ##      NC_CHAR :Conventions = &quot;ACDD-1.3; CF-1.8&quot; ;
-##      NC_CHAR :history = &quot;File created using RNetCDF in R at 2022-02-07T13:37:57Z&quot; ;
+##      NC_CHAR :history = &quot;File created using RNetCDF in R at 2022-02-22T07:43:04Z&quot; ;
 ##      NC_CHAR :processing_level = &quot;raw&quot; ;
-##      NC_CHAR :date_created = &quot;2022-02-07T13:37:57Z&quot; ;
+##      NC_CHAR :date_created = &quot;2022-02-22T07:43:04Z&quot; ;
 ##      NC_CHAR :creator_type = &quot;person&quot; ;
 ##      NC_CHAR :creator_institution = &quot;The University Centre in Svalbard&quot; ;
 ##      NC_CHAR :creator_email = &quot;olan@unis.no&quot; ;

@@ -20,7 +20,7 @@ data <- read_excel("meteorological_measurements_time_series_variables.xlsx")
 print(data, n=Inf)
 ```
 
-We have a time series of meteorlogical data; air_temperature, wind_speed and relative_humidity, each recorded at 1 hour intervals. We can ignore that an incorrect date has been added by default. We will see later that we only need the time anyway. 
+We have a time series of meteorological data; air_temperature, wind_speed and relative_humidity, each recorded at 1 hour intervals. We can ignore that an incorrect date has been added by default. We will see later that we only need the time anyway. 
 Most columns headers are taken from the CF standard names. This is a common vocabulary, where parameter names can be searched for online, with descriptions, so that everyone is clear what the data represent.
 
 http://cfconventions.org/standard-names.html
@@ -50,7 +50,7 @@ dim.def.nc(nc, "time", nrow(data))
 
 ### About time
 
-There are specific recommendations on how time should be stored in netCDF files. I will try to explain briefly here, and there is a nice explanation here too: https://www.unidata.ucar.edu/software/netcdf/time/recs.html
+There are specific recommendations on how time should be stored in NetCDF-CF files. I will try to explain briefly here, and there is a nice explanation here too: https://www.unidata.ucar.edu/software/netcdf/time/recs.html
 
 It is most common to have a dimension named "time" as well as a coordinate variable with the same name. Let's discuss the variable first.
 

@@ -206,11 +206,11 @@ print(data, n=Inf)</code></pre>
 </div>
 <div id="creating-netcdf-file" class="section level2">
 <h2>Creating NetCDF file</h2>
-<p>First let’s initialise the dataset</p>
+<p>First let’s initialise the dataset.</p>
 <pre class="r"><code>nc &lt;- create.nc(&quot;chlorophyll_a_depth_profile.nc&quot;)</code></pre>
 <div id="defining-dimensions" class="section level3">
 <h3>Defining dimensions</h3>
-<p>A NetCDF file has dimensions that define the shape of the data. In this case, our only dimension is the sample depth, and we have 10 depths. ‘depth’ is a commonly defined dimension name, so to be CF-compliant, we should use that.</p>
+<p>A NetCDF file has dimensions that define the shape of the data. In this case, our only dimension is the sample depth, and we have 10 depths. ‘depth’ is a commonly defined dimension name, so to be CF-compliant, we should use that. Note that at this point we are not assigning values for the depths.</p>
 <pre class="r"><code>dim.def.nc(nc, &quot;depth&quot;, nrow(data))</code></pre>
 </div>
 <div id="defining-variables" class="section level3">
@@ -295,10 +295,10 @@ print.nc(nc)</code></pre>
 ##      NC_CHAR :time_coverage_start = &quot;2019-04-18T09:30:12Z&quot; ;
 ##      NC_CHAR :time_coverage_end = &quot;2019-04-18T09:30:12Z&quot; ;
 ##      NC_CHAR :Conventions = &quot;ACDD-1.3; CF-1.8&quot; ;
-##      NC_CHAR :history = &quot;File created using RNetCDF in R at 2022-02-07T13:31:48Z&quot; ;
+##      NC_CHAR :history = &quot;File created using RNetCDF in R at 2022-02-22T07:42:55Z&quot; ;
 ##      NC_CHAR :source = &quot;Chlorophyll A from water sample from CTD with Niskin bottles&quot; ;
 ##      NC_CHAR :processing_level = &quot;Acid correction applied to Chlorophyll A variable&quot; ;
-##      NC_CHAR :date_created = &quot;2022-02-07T13:31:48Z&quot; ;
+##      NC_CHAR :date_created = &quot;2022-02-22T07:42:55Z&quot; ;
 ##      NC_CHAR :creator_type = &quot;person&quot; ;
 ##      NC_CHAR :creator_institution = &quot;The University Centre in Svalbard&quot; ;
 ##      NC_CHAR :creator_email = &quot;olan@unis.no&quot; ;
