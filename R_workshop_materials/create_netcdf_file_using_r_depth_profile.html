@@ -210,7 +210,7 @@ print(data, n=Inf)</code></pre>
 <pre class="r"><code>nc &lt;- create.nc(&quot;chlorophyll_a_depth_profile.nc&quot;)</code></pre>
 <div id="defining-dimensions" class="section level3">
 <h3>Defining dimensions</h3>
-<p>A NetCDF file has dimensions that define the shape of the data. In this case, our only dimension is the sample depth, and we have 10 depths. ‘depth’ is a commonly defined dimension name, so to be CF-compliant, we should use that. Note that at this point we are not assigning values for the depths.</p>
+<p>A NetCDF file has dimensions that define the shape of the data. In this case, our main dimension is the sample depth, and we have 10 depths. ‘depth’ is a commonly defined dimension name, so to be CF-compliant, we should use that. Note that at this point we are not assigning values for the depths.</p>
 <pre class="r"><code>dim.def.nc(nc, &quot;depth&quot;, nrow(data))</code></pre>
 </div>
 <div id="defining-variables" class="section level3">
@@ -219,6 +219,16 @@ print(data, n=Inf)</code></pre>
 <p>Let’s now initialise our variables. We will assign our values later.</p>
 <pre class="r"><code>var.def.nc(nc, &quot;depth&quot;, &quot;NC_INT&quot;, &quot;depth&quot;)
 var.def.nc(nc, &quot;chlorophyll_a&quot;, &quot;NC_DOUBLE&quot;, &quot;depth&quot;)</code></pre>
+</div>
+<div id="event-ids" class="section level3">
+<h3>Event IDs</h3>
+<p>We can store our eventIDs for each sample in our NetCDF file too. Depending on the version of R and RNetCDF you are using, you might need to create a new dimension first that states the maximum number of characters that can exist in a string - 36 in this case.</p>
+<p>The following two lines of code may not be necessary in newer version of R and RNetCDF. NetCDF itself supporting multiple character strings for variables is a relatively new thing.</p>
+<pre class="r"><code>dim.def.nc(nc, &quot;max_string_length&quot;, 36)
+var.def.nc(nc,&quot;eventid&quot;,&quot;NC_CHAR&quot;,c(&quot;max_string_length&quot;,&quot;depth&quot;))</code></pre>
+</div>
+<div id="variable-attributes" class="section level3">
+<h3>Variable attributes</h3>
 <p>Now we need a variable attributes for our variables, so that our dataset is compliant with the CF conventions.</p>
 <p>The standard_name should be selected from here: <a href="http://cfconventions.org/standard-names.html" class="uri">http://cfconventions.org/standard-names.html</a>. Standard names are commonly accepted parameter names with descriptions. By selecting appropriate standard names for your variable, the data user will be clear exactly what the data represent.</p>
 <p>The units should match what is provided for the standard name as listed above. You may need to convert your data.</p>
@@ -228,15 +238,21 @@ var.def.nc(nc, &quot;chlorophyll_a&quot;, &quot;NC_DOUBLE&quot;, &quot;depth&quo
 <p>The data variable should be assigned a fill value. This is a value that is used at grid points where no data exists. We usually choose an unrealistically large value that will obviously appear as a spike to the data user. The fill value is later specified as a variable attribute. Note that coordinate variables should not have fill values as they should not have missing values.</p>
 <pre class="r"><code>att.put.nc(nc, &quot;depth&quot;, &quot;units&quot;, &quot;NC_CHAR&quot;, &quot;m&quot;)
 att.put.nc(nc, &quot;depth&quot;, &quot;long_name&quot;, &quot;NC_CHAR&quot;, &quot;sample depth in meters&quot;)
+att.put.nc(nc, &quot;depth&quot;, &quot;standard_name&quot;, &quot;NC_CHAR&quot;, &quot;depth&quot;)
+att.put.nc(nc, &quot;depth&quot;, &quot;coverage_content_type&quot;, &quot;NC_CHAR&quot;, &quot;coordinate&quot;)
 
 att.put.nc(nc, &quot;chlorophyll_a&quot;, &quot;standard_name&quot;, &quot;NC_CHAR&quot;, &quot;mass_concentration_of_chlorophyll_a_in_sea_water&quot;)
 att.put.nc(nc, &quot;chlorophyll_a&quot;, &quot;long_name&quot;, &quot;NC_CHAR&quot;, &quot;Mass concentration of Chlorophyll A in sea water, after acid correction&quot;)
 att.put.nc(nc, &quot;chlorophyll_a&quot;, &quot;coverage_content_type&quot;, &quot;NC_CHAR&quot;, &quot;physicalMeasurement&quot;)
 att.put.nc(nc, &quot;chlorophyll_a&quot;, &quot;units&quot;, &quot;NC_CHAR&quot;, &quot;kg m-3&quot;)
-att.put.nc(nc, &quot;chlorophyll_a&quot;, &quot;_FillValue&quot;, &quot;NC_DOUBLE&quot;, -99999.9)</code></pre>
+att.put.nc(nc, &quot;chlorophyll_a&quot;, &quot;_FillValue&quot;, &quot;NC_DOUBLE&quot;, -99999.9)
+
+att.put.nc(nc, &quot;eventid&quot;, &quot;long_name&quot;, &quot;NC_CHAR&quot;, &quot;Univerisally unique ID for each sample. eventID taken from the Darwin Core standard (https://dwc.tdwg.org/list/#dwc_eventID). More information on each sample can be found by searching using the eventID in the Nansen Legacy metadata catalogue (https://sios-svalbard.org/aen/tools).&quot;)
+att.put.nc(nc, &quot;eventid&quot;, &quot;coverage_content_type&quot;, &quot;NC_CHAR&quot;, &quot;referenceInformation&quot;)</code></pre>
 <p>Now it’s time to populate the variables with our data</p>
 <pre class="r"><code>var.put.nc(nc, &quot;depth&quot;, data$sampleDepthInMeters)
-var.put.nc(nc, &quot;chlorophyll_a&quot;, data$mass_concentration_of_chlorophyll_a_in_sea_water)</code></pre>
+var.put.nc(nc, &quot;chlorophyll_a&quot;, data$mass_concentration_of_chlorophyll_a_in_sea_water)
+var.put.nc(nc, &quot;eventid&quot;, data$eventID)</code></pre>
 </div>
 <div id="gloabl-attributes" class="section level3">
 <h3>Gloabl attributes</h3>
@@ -270,16 +286,22 @@ print.nc(nc)</code></pre>
 <pre><code>## netcdf classic {
 ## dimensions:
 ##  depth = 10 ;
+##  max_string_length = 36 ;
 ## variables:
 ##  NC_INT depth(depth) ;
 ##      NC_CHAR depth:units = &quot;m&quot; ;
 ##      NC_CHAR depth:long_name = &quot;sample depth in meters&quot; ;
+##      NC_CHAR depth:standard_name = &quot;depth&quot; ;
+##      NC_CHAR depth:coverage_content_type = &quot;coordinate&quot; ;
 ##  NC_DOUBLE chlorophyll_a(depth) ;
 ##      NC_CHAR chlorophyll_a:standard_name = &quot;mass_concentration_of_chlorophyll_a_in_sea_water&quot; ;
 ##      NC_CHAR chlorophyll_a:long_name = &quot;Mass concentration of Chlorophyll A in sea water, after acid correction&quot; ;
 ##      NC_CHAR chlorophyll_a:coverage_content_type = &quot;physicalMeasurement&quot; ;
 ##      NC_CHAR chlorophyll_a:units = &quot;kg m-3&quot; ;
 ##      NC_DOUBLE chlorophyll_a:_FillValue = -99999.9 ;
+##  NC_CHAR eventid(max_string_length, depth) ;
+##      NC_CHAR eventid:long_name = &quot;Univerisally unique ID for each sample. eventID taken from the Darwin Core standard (https://dwc.tdwg.org/list/#dwc_eventID). More information on each sample can be found by searching using the eventID in the Nansen Legacy metadata catalogue (https://sios-svalbard.org/aen/tools).&quot; ;
+##      NC_CHAR eventid:coverage_content_type = &quot;referenceInformation&quot; ;
 ## 
 ## // global attributes:
 ##      NC_CHAR :title = &quot;Chlorophyll A measurements from the P1 (NLEG01) station in the Northern Barents Sea&quot; ;
@@ -295,10 +317,10 @@ print.nc(nc)</code></pre>
 ##      NC_CHAR :time_coverage_start = &quot;2019-04-18T09:30:12Z&quot; ;
 ##      NC_CHAR :time_coverage_end = &quot;2019-04-18T09:30:12Z&quot; ;
 ##      NC_CHAR :Conventions = &quot;ACDD-1.3; CF-1.8&quot; ;
-##      NC_CHAR :history = &quot;File created using RNetCDF in R at 2022-02-22T07:42:55Z&quot; ;
+##      NC_CHAR :history = &quot;File created using RNetCDF in R at 2022-03-16T08:59:33Z&quot; ;
 ##      NC_CHAR :source = &quot;Chlorophyll A from water sample from CTD with Niskin bottles&quot; ;
 ##      NC_CHAR :processing_level = &quot;Acid correction applied to Chlorophyll A variable&quot; ;
-##      NC_CHAR :date_created = &quot;2022-02-22T07:42:55Z&quot; ;
+##      NC_CHAR :date_created = &quot;2022-03-16T08:59:33Z&quot; ;
 ##      NC_CHAR :creator_type = &quot;person&quot; ;
 ##      NC_CHAR :creator_institution = &quot;The University Centre in Svalbard&quot; ;
 ##      NC_CHAR :creator_email = &quot;olan@unis.no&quot; ;

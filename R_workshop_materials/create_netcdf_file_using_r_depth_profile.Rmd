@@ -43,7 +43,7 @@ nc <- create.nc("chlorophyll_a_depth_profile.nc")
 
 ### Defining dimensions
 
-A NetCDF file has dimensions that define the shape of the data. In this case, our only dimension is the sample depth, and we have 10 depths. 'depth' is a commonly defined dimension name, so to be CF-compliant, we should use that. Note that at this point we are not assigning values for the depths.
+A NetCDF file has dimensions that define the shape of the data. In this case, our main dimension is the sample depth, and we have 10 depths. 'depth' is a commonly defined dimension name, so to be CF-compliant, we should use that. Note that at this point we are not assigning values for the depths.
 
 ```{r}
 dim.def.nc(nc, "depth", nrow(data))
@@ -59,6 +59,19 @@ Let's now initialise our variables. We will assign our values later.
 var.def.nc(nc, "depth", "NC_INT", "depth")
 var.def.nc(nc, "chlorophyll_a", "NC_DOUBLE", "depth")
 ```
+
+### Event IDs
+
+We can store our eventIDs for each sample in our NetCDF file too. Depending on the version of R and RNetCDF you are using, you might need to create a new dimension first that states the maximum number of characters that can exist in a string - 36 in this case.
+
+The following two lines of code may not be necessary in newer version of R and RNetCDF. NetCDF itself supporting multiple character strings for variables is a relatively new thing.
+
+```{r}
+dim.def.nc(nc, "max_string_length", 36)
+var.def.nc(nc,"eventid","NC_CHAR",c("max_string_length","depth"))
+```
+
+### Variable attributes
 
 Now we need a variable attributes for our variables, so that our dataset is compliant with the CF conventions. 
 
@@ -77,12 +90,17 @@ The data variable should be assigned a fill value. This is a value that is used 
 ```{r}
 att.put.nc(nc, "depth", "units", "NC_CHAR", "m")
 att.put.nc(nc, "depth", "long_name", "NC_CHAR", "sample depth in meters")
+att.put.nc(nc, "depth", "standard_name", "NC_CHAR", "depth")
+att.put.nc(nc, "depth", "coverage_content_type", "NC_CHAR", "coordinate")
 
 att.put.nc(nc, "chlorophyll_a", "standard_name", "NC_CHAR", "mass_concentration_of_chlorophyll_a_in_sea_water")
 att.put.nc(nc, "chlorophyll_a", "long_name", "NC_CHAR", "Mass concentration of Chlorophyll A in sea water, after acid correction")
 att.put.nc(nc, "chlorophyll_a", "coverage_content_type", "NC_CHAR", "physicalMeasurement")
 att.put.nc(nc, "chlorophyll_a", "units", "NC_CHAR", "kg m-3")
 att.put.nc(nc, "chlorophyll_a", "_FillValue", "NC_DOUBLE", -99999.9)
+
+att.put.nc(nc, "eventid", "long_name", "NC_CHAR", "Univerisally unique ID for each sample. eventID taken from the Darwin Core standard (https://dwc.tdwg.org/list/#dwc_eventID). More information on each sample can be found by searching using the eventID in the Nansen Legacy metadata catalogue (https://sios-svalbard.org/aen/tools).")
+att.put.nc(nc, "eventid", "coverage_content_type", "NC_CHAR", "referenceInformation")
 ```
 
 Now it's time to populate the variables with our data
@@ -90,6 +108,7 @@ Now it's time to populate the variables with our data
 ```{r}
 var.put.nc(nc, "depth", data$sampleDepthInMeters)
 var.put.nc(nc, "chlorophyll_a", data$mass_concentration_of_chlorophyll_a_in_sea_water)
+var.put.nc(nc, "eventid", data$eventID)
 ```
 
 ### Gloabl attributes
