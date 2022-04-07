@@ -30,7 +30,7 @@ xrds = xr.Dataset(
 for idx, row in global_attributes.iterrows():
     xrds.attrs[row['Attribute']] = row['Value'] 
 
-dtnow = dt.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+dtnow = dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 xrds.attrs['date_created'] = dtnow
 xrds.attrs['history'] = f'File create at {dtnow} using xarray in Python'
 
