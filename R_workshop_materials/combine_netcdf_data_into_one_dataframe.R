@@ -29,7 +29,7 @@ extract_variable_from_nc <- function(nc, variable) {
   )
 }
 
-# List of variables that I am going to extract from the NetCDF file
+# Vector of variables that I am going to extract from the NetCDF file
 # The name should match the variable names in the NetCDF file
 variables <- c(
   "DEPTH",
@@ -43,7 +43,7 @@ variables <- c(
   "EVENTID_10um"
 )
 
-# List of global attributes that I am going to extract from the NetCDF file
+# Vector of global attributes that I am going to extract from the NetCDF file
 # The name should match the global attribute name in the NetCDF file
 global_attributes <- c(
   "cruiseNumber",
