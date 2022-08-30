@@ -10,9 +10,16 @@ extract_global_attribute_from_nc <- function(nc, global_attribute) {
       result <- att.get.nc(nc,"NC_GLOBAL",global_attribute)
       return(result)
     },
-    error = function(e) {
+    error = function(cond) {
       message(paste(global_attribute,' attribute not found in NetCDF object'))
-    }
+      message("Here's the original error message:")
+      message(cond)
+    },
+    warning=function(cond) {
+      message(paste("Warning message for attribute ", global_attribute))
+      message("Here's the original warning message:")
+      message(cond)
+    },
   )
 }
 
@@ -23,9 +30,16 @@ extract_variable_from_nc <- function(nc, variable) {
       result <- var.get.nc(nc,variable)
       return(result)
     },
-    error = function(e) {
-      message(paste(variable, ' variable not found in NetCDF object'))
-    }
+    error = function(cond) {
+      message(paste(variable,' variable not found in NetCDF object'))
+      message("Here's the original error message:")
+      message(cond)
+    },
+    warning=function(cond) {
+      message(paste("Warning message for variable ", variable))
+      message("Here's the original warning message:")
+      message(cond)
+    },
   )
 }
 
