@@ -13,7 +13,7 @@ library(RNetCDF)
 
 ## Introducing the data
 
-In this example, we will be loading a depth profile of some Chlorophyll A data. However, this example should be relevant for depth profiles of any data.
+In this example, we will be loading a single file that includes multiple CTD depth profiles. 
 
 Nansen Legacy data can be found via the SIOS data access portal. All Nansen Legacy datasets should be returned when filtering using the 'AeN' collection. Please contact data.nleg@unis.no if you have any problems finding or accessing data.
 
