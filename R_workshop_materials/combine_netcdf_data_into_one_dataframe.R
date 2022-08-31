@@ -19,7 +19,7 @@ extract_global_attribute_from_nc <- function(nc, global_attribute) {
       message(paste("Warning message for attribute ", global_attribute))
       message("Here's the original warning message:")
       message(cond)
-    },
+    }
   )
 }
 
@@ -39,7 +39,7 @@ extract_variable_from_nc <- function(nc, variable) {
       message(paste("Warning message for variable ", variable))
       message("Here's the original warning message:")
       message(cond)
-    },
+    }
   )
 }
 
