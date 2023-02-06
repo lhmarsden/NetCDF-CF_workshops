@@ -106,6 +106,6 @@ for (folder in folders) {
   }
 }
 
-#library(writexl)
-#write_xlsx(df,"/home/lukem/Documents/r_chla_all.xlsx")
+library(writexl)
+write_xlsx(df,"/home/lukem/Documents/r_chla_all.xlsx")
 
